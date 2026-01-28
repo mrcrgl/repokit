@@ -1,6 +1,7 @@
 use crate::manifest;
 use anyhow::{Context, Result};
 use std::collections::{BTreeMap, BTreeSet};
+use std::io;
 use std::path::{Component, Path, PathBuf};
 use walkdir::WalkDir;
 
@@ -97,7 +98,16 @@ pub fn compare_to_template(
     let mut extra = Vec::new();
 
     for entry in WalkDir::new(target_root).follow_links(false) {
+        if let Err(err) = &entry
+            && err
+                .io_error()
+                .map(|e| e.kind())
+                .is_some_and(|kind| matches!(kind, io::ErrorKind::PermissionDenied))
+        {
+            continue;
+        }
         let entry = entry.with_context(|| format!("failed to walk {}", target_root.display()))?;
+
         if entry.file_type().is_dir() {
             continue;
         }

@@ -5,33 +5,19 @@ use repokit::manifest::Manifest;
 use repokit::status::compare_to_manifest;
 
 #[test]
-fn manifest_metadata_matches_exactly() {
+fn manifest_metadata_initializes_fields() {
     let manifest = Manifest::new(
         "https://example.com/template.git".to_string(),
         Some("main".to_string()),
         vec!["base".to_string(), "service".to_string()],
     );
 
-    assert!(manifest.matches_metadata(
-        "https://example.com/template.git",
-        Some("main"),
-        &vec!["base".to_string(), "service".to_string()],
-    ));
-    assert!(!manifest.matches_metadata(
-        "https://example.com/other.git",
-        Some("main"),
-        &vec!["base".to_string(), "service".to_string()],
-    ));
-    assert!(!manifest.matches_metadata(
-        "https://example.com/template.git",
-        Some("dev"),
-        &vec!["base".to_string(), "service".to_string()],
-    ));
-    assert!(!manifest.matches_metadata(
-        "https://example.com/template.git",
-        Some("main"),
-        &vec!["base".to_string()],
-    ));
+    assert_eq!(manifest.template_url, "https://example.com/template.git");
+    assert_eq!(manifest.reference.as_deref(), Some("main"));
+    assert_eq!(
+        manifest.profiles,
+        vec!["base".to_string(), "service".to_string()]
+    );
 }
 
 #[test]

@@ -1,6 +1,7 @@
 use crate::merge::{CompiledMergeRule, MergeConfig, match_strategy};
 use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use walkdir::WalkDir;
@@ -78,7 +79,7 @@ pub fn merge_config_by_profile(profiles: &[Profile]) -> Result<BTreeMap<String, 
     let mut result = BTreeMap::new();
 
     for profile in profiles {
-        let path = profile.path.join("repokit").join("merge.toml");
+        let path = profile.path.join(".repokit").join("merge.toml");
         if path.exists() {
             let config = MergeConfig::load_from_path(&path)?;
             result.insert(profile.name.clone(), config);
@@ -146,6 +147,14 @@ fn collect_profile_files(profile: &Profile) -> Result<Vec<OverlayFile>> {
         })?;
 
         if entry.file_type().is_dir() {
+            continue;
+        }
+
+        if entry
+            .path()
+            .components()
+            .any(|component| component.as_os_str() == OsStr::new(".repokit"))
+        {
             continue;
         }
 

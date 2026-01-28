@@ -5,7 +5,7 @@ use std::path::Path;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MergeConfig {
-    #[serde(default)]
+    #[serde(default, alias = "rule")]
     pub rules: Vec<MergeRule>,
 }
 

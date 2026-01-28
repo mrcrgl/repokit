@@ -19,18 +19,6 @@ mod template;
 #[command(name = "repokit")]
 #[command(about = "Apply and update repo templates safely", long_about = None)]
 struct Cli {
-    /// Template git URL
-    #[arg(long)]
-    template: Option<String>,
-
-    /// Template ref (tag, branch, or commit)
-    #[arg(long)]
-    ref_: Option<String>,
-
-    /// Profiles to apply (comma-separated), in order
-    #[arg(long)]
-    profiles: Option<String>,
-
     #[command(subcommand)]
     command: Commands,
 }
@@ -38,7 +26,19 @@ struct Cli {
 #[derive(Subcommand, Debug)]
 enum Commands {
     /// Apply template to current repo and write manifest
-    Init,
+    Init {
+        /// Template git URL
+        #[arg(long)]
+        template: Option<String>,
+
+        /// Template ref (tag, branch, or commit)
+        #[arg(long)]
+        ref_: Option<String>,
+
+        /// Profiles to apply (comma-separated), in order
+        #[arg(long)]
+        profiles: Option<String>,
+    },
     /// Update managed files to a new template ref
     Update,
     /// Show drift status vs manifest
@@ -104,33 +104,31 @@ fn resolve_profile_order(raw: Option<&str>) -> Vec<String> {
 }
 
 fn run(cli: Cli) -> Result<()> {
-    let profiles = resolve_profile_order(cli.profiles.as_deref());
     let target_root = std::env::current_dir()?;
 
     // Placeholder command handling for iterative build-out.
     match cli.command {
-        Commands::Init => {
+        Commands::Init {
+            template,
+            ref_,
+            profiles,
+        } => {
             println!("repokit init (scaffold)");
             println!(
                 "template={:?} ref={:?} profiles={:?}",
-                cli.template, cli.ref_, cli.profiles
+                template, ref_, profiles
             );
-            let template_url = cli
-                .template
+            let template_url = template
                 .as_deref()
                 .ok_or_else(|| anyhow!("--template is required for this command"))?;
             let manifest_path = target_root.join(".kit.toml");
             if manifest_path.exists() {
-                let existing = manifest::Manifest::load_from_path(&manifest_path)?;
-                if existing.matches_metadata(template_url, cli.ref_.as_deref(), &profiles) {
-                    let report = status::compare_to_manifest(&target_root, &existing)?;
-                    if report.is_clean() {
-                        println!("already up to date");
-                        return Ok(());
-                    }
-                }
+                return Err(anyhow!(
+                    "manifest already exists; run repokit config set instead"
+                ));
             }
-            let repo = fetch_template_required(&cli)?;
+            let profiles = resolve_profile_order(profiles.as_deref());
+            let repo = fetch_template_required(template_url, ref_.as_deref())?;
             println!("template repo cloned to {:?}", repo.path());
             let layout = template::TemplateLayout::load(repo.path(), &profiles)?;
             let merge_configs = template::merge_config_by_profile(&layout.profiles)?;
@@ -147,8 +145,8 @@ fn run(cli: Cli) -> Result<()> {
             let skip_paths: Vec<PathBuf> = merged_paths.iter().cloned().collect();
             let report = apply::apply_init_with_skip(&layout, &target_root, &skip_paths)?;
             let mut manifest = manifest::Manifest::new(
-                cli.template.clone().unwrap_or_default(),
-                cli.ref_.clone(),
+                template.clone().unwrap_or_default(),
+                ref_.clone(),
                 profiles.clone(),
             );
             for entry in &report.entries {
@@ -541,14 +539,9 @@ fn build_desired_template_bytes(
     Ok(desired)
 }
 
-fn fetch_template_required(cli: &Cli) -> Result<git::ClonedRepo> {
-    let template_url = cli
-        .template
-        .as_deref()
-        .ok_or_else(|| anyhow!("--template is required for this command"))?;
-
+fn fetch_template_required(template_url: &str, reference: Option<&str>) -> Result<git::ClonedRepo> {
     git::clone_template_to_temp(git::GitCloneOptions {
         template_url,
-        reference: cli.ref_.as_deref(),
+        reference,
     })
 }

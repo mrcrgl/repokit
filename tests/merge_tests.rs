@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 
 use repokit::gitignore::merge_gitignore;
 use repokit::markdown::merge_markdown_blocks;
+use repokit::merge::MergeConfig;
 
 #[test]
 fn merge_gitignore_preserves_user_lines_and_replaces_blocks() {
@@ -115,4 +116,22 @@ fn merge_markdown_no_existing_content() {
 "#;
 
     assert_eq!(output, expected);
+}
+
+#[test]
+fn merge_config_accepts_rule_alias() {
+    let config = r#"
+[[rule]]
+name = "gitignore"
+strategy = "gitignore"
+patterns = [".gitignore"]
+"#;
+
+    let parsed: MergeConfig = toml::from_str(config).expect("parse merge config");
+    assert_eq!(parsed.rules.len(), 1);
+    assert_eq!(
+        parsed.rules[0].strategy,
+        repokit::merge::MergeStrategy::Gitignore
+    );
+    assert_eq!(parsed.rules[0].patterns, vec![".gitignore".to_string()]);
 }

@@ -247,7 +247,11 @@ pub fn labels_by_profile(profiles: &[Profile]) -> Result<BTreeMap<String, Vec<La
     let mut result = BTreeMap::new();
 
     for profile in profiles {
-        let path = profile.path.join("github").join("labels.toml");
+        let path = profile
+            .path
+            .join(".repokit")
+            .join("github")
+            .join("labels.toml");
         if path.exists() {
             let content = std::fs::read_to_string(&path)
                 .with_context(|| format!("failed to read labels {}", path.display()))?;

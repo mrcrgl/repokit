@@ -13,6 +13,8 @@ Use a Git URL or a local filesystem path:
   - `repokit init --template /path/to/template --profiles base,service`
 
 Notes:
+- `init` is the only command that accepts `--template`, `--ref`, and `--profiles`.
+- If `.kit.toml` already exists, `init` fails; use `repokit config set` instead.
 - Local templates do **not** support `--ref`.
 - `base` is always included first; duplicate profiles are ignored.
 
@@ -42,10 +44,12 @@ Templates are expected to follow this structure:
 
 - `profiles/base` (required)
 - `profiles/<profile>` (optional overlays)
-- Optional merge rules per profile:
-  - `profiles/<profile>/repokit/merge.toml`
+- Optional merge rules (combined across selected profiles, later profiles win on conflicts):
+  - `profiles/<profile>/.repokit/merge.toml`
 - Optional GitHub labels per profile:
-  - `profiles/<profile>/github/labels.toml`
+  - `profiles/<profile>/.repokit/github/labels.toml`
+
+The `.repokit/` directory configures `repokit` behavior only and is not copied into the target repo.
 
 ### Example merge rules (`merge.toml`)
 
