@@ -34,6 +34,14 @@ pub fn merge_gitignore(
     }
 
     while user_lines
+        .first()
+        .map(|line| line.trim().is_empty())
+        .unwrap_or(false)
+    {
+        user_lines.remove(0);
+    }
+
+    while user_lines
         .last()
         .map(|line| line.trim().is_empty())
         .unwrap_or(false)

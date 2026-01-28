@@ -34,12 +34,33 @@ pub fn merge_markdown_blocks(
     }
 
     while user_lines
+        .first()
+        .map(|line| line.trim().is_empty())
+        .unwrap_or(false)
+    {
+        user_lines.remove(0);
+    }
+
+    while user_lines
         .last()
         .map(|line| line.trim().is_empty())
         .unwrap_or(false)
     {
         user_lines.pop();
     }
+
+    let mut normalized: Vec<String> = Vec::new();
+    for line in user_lines {
+        if line.trim().is_empty() {
+            if let Some(last) = normalized.last() {
+                if last.trim().is_empty() {
+                    continue;
+                }
+            }
+        }
+        normalized.push(line);
+    }
+    user_lines = normalized;
 
     let mut output = String::new();
     for line in user_lines {

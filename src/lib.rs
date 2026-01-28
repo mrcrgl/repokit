@@ -1,0 +1,8 @@
+pub mod apply;
+pub mod git;
+pub mod gitignore;
+pub mod manifest;
+pub mod markdown;
+pub mod merge;
+pub mod status;
+pub mod template;
