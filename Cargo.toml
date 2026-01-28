@@ -1,5 +1,5 @@
 [package]
-name = "repokit-cli"
+name = "repokit"
 version = "0.1.0"
 edition = "2024"
 

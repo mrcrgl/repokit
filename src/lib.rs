@@ -1,5 +1,6 @@
 pub mod apply;
 pub mod git;
+pub mod github;
 pub mod gitignore;
 pub mod manifest;
 pub mod markdown;

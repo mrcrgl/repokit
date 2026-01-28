@@ -70,6 +70,29 @@ pub fn ensure_git_available() -> Result<()> {
     }
 }
 
+pub fn origin_url(repo_dir: &Path) -> Result<String> {
+    let output = Command::new("git")
+        .args(["config", "--get", "remote.origin.url"])
+        .current_dir(repo_dir)
+        .stdout(Stdio::piped())
+        .stderr(Stdio::piped())
+        .output()
+        .context("failed to read git origin URL")?;
+
+    if !output.status.success() {
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        return Err(anyhow!("git config failed: {}", stderr.trim()));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    let url = stdout.trim();
+    if url.is_empty() {
+        return Err(anyhow!("git origin URL is empty"));
+    }
+
+    Ok(url.to_string())
+}
+
 fn run_git(cwd: Option<&Path>, args: &[&str]) -> Result<()> {
     let mut cmd = Command::new("git");
     cmd.args(args)

@@ -1,4 +1,4 @@
-use crate::merge::MergeConfig;
+use crate::merge::{CompiledMergeRule, MergeConfig, match_strategy};
 use anyhow::{Context, Result, bail};
 use std::collections::BTreeMap;
 use std::fs;
@@ -127,6 +127,29 @@ pub fn file_lines_by_profile(
         } else {
             result.insert(profile.name.clone(), Vec::new());
         }
+    }
+
+    Ok(result)
+}
+
+pub fn template_file_bytes(
+    layout: &TemplateLayout,
+    compiled_rules: &[CompiledMergeRule],
+) -> Result<BTreeMap<PathBuf, Vec<u8>>> {
+    let mut result = BTreeMap::new();
+
+    for overlay in &layout.files {
+        if match_strategy(compiled_rules, &overlay.relative_path).is_some() {
+            continue;
+        }
+
+        let bytes = fs::read(&overlay.source_path).with_context(|| {
+            format!(
+                "failed to read template file {}",
+                overlay.source_path.display()
+            )
+        })?;
+        result.insert(overlay.relative_path.clone(), bytes);
     }
 
     Ok(result)

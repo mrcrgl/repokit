@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
-use repokit_cli::manifest::Manifest;
-use repokit_cli::status::compare_to_manifest;
+use repokit::manifest::Manifest;
+use repokit::status::compare_to_manifest;
 
 #[test]
 fn manifest_metadata_matches_exactly() {
@@ -47,7 +47,7 @@ fn init_idempotence_precheck_is_clean_when_manifest_matches_files() {
         Some("main".to_string()),
         vec!["base".to_string()],
     );
-    let hash = repokit_cli::manifest::hash_file(&file_path).expect("hash file");
+    let hash = repokit::manifest::hash_file(&file_path).expect("hash file");
     manifest.insert_file_hash(PathBuf::from("README.md"), hash);
 
     let report = compare_to_manifest(root, &manifest).expect("status compare");
@@ -73,7 +73,7 @@ fn init_idempotence_precheck_detects_drift() {
     );
     manifest.insert_file_hash(
         PathBuf::from("README.md"),
-        repokit_cli::manifest::hash_bytes(b"old\n"),
+        repokit::manifest::hash_bytes(b"old\n"),
     );
 
     let report = compare_to_manifest(root, &manifest).expect("status compare");

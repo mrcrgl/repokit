@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::PathBuf;
 
-use repokit_cli::manifest::Manifest;
-use repokit_cli::status::compare_to_manifest;
+use repokit::manifest::Manifest;
+use repokit::status::compare_to_manifest;
 
 #[test]
 fn status_reports_clean_when_all_files_match() {
@@ -17,7 +17,7 @@ fn status_reports_clean_when_all_files_match() {
         Some("main".to_string()),
         vec!["base".to_string()],
     );
-    let hash = repokit_cli::manifest::hash_file(&file_path).expect("hash file");
+    let hash = repokit::manifest::hash_file(&file_path).expect("hash file");
     manifest.insert_file_hash(PathBuf::from("README.md"), hash);
 
     let report = compare_to_manifest(root, &manifest).expect("status compare");
@@ -48,10 +48,10 @@ fn status_reports_missing_and_modified_and_extra() {
         vec!["base".to_string()],
     );
 
-    let keep_hash = repokit_cli::manifest::hash_file(&keep_path).expect("hash file");
+    let keep_hash = repokit::manifest::hash_file(&keep_path).expect("hash file");
     manifest.insert_file_hash(PathBuf::from("keep.txt"), keep_hash);
 
-    let old_hash = repokit_cli::manifest::hash_bytes(b"old");
+    let old_hash = repokit::manifest::hash_bytes(b"old");
     manifest.insert_file_hash(PathBuf::from("changed.txt"), old_hash);
 
     manifest.insert_file_hash(PathBuf::from("missing.txt"), "deadbeef".to_string());

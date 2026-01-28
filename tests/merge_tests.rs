@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 
-use repokit_cli::gitignore::merge_gitignore;
-use repokit_cli::markdown::merge_markdown_blocks;
+use repokit::gitignore::merge_gitignore;
+use repokit::markdown::merge_markdown_blocks;
 
 #[test]
 fn merge_gitignore_preserves_user_lines_and_replaces_blocks() {
