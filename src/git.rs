@@ -1,4 +1,5 @@
 use anyhow::{Context, Result, anyhow};
+use std::fs;
 use std::path::{Path, PathBuf};
 use std::process::{Command, Stdio};
 
@@ -20,6 +21,16 @@ impl ClonedRepo {
 }
 
 pub fn clone_template_to_temp(opts: GitCloneOptions<'_>) -> Result<ClonedRepo> {
+    let local_path = Path::new(opts.template_url);
+    if local_path.exists() {
+        if opts.reference.is_some() {
+            return Err(anyhow!("--ref is not supported for local template paths"));
+        }
+        let resolved = fs::canonicalize(local_path)
+            .with_context(|| format!("failed to resolve template path {}", local_path.display()))?;
+        return Ok(ClonedRepo { path: resolved });
+    }
+
     ensure_git_available()?;
 
     let dir = tempfile::tempdir().context("create temp dir for git clone")?;

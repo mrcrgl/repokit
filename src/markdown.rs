@@ -51,12 +51,11 @@ pub fn merge_markdown_blocks(
 
     let mut normalized: Vec<String> = Vec::new();
     for line in user_lines {
-        if line.trim().is_empty() {
-            if let Some(last) = normalized.last() {
-                if last.trim().is_empty() {
-                    continue;
-                }
-            }
+        if line.trim().is_empty()
+            && let Some(last) = normalized.last()
+            && last.trim().is_empty()
+        {
+            continue;
         }
         normalized.push(line);
     }

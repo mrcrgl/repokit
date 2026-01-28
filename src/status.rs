@@ -24,12 +24,6 @@ pub struct TemplateStatusReport {
     pub extra: Vec<PathBuf>,
 }
 
-impl TemplateStatusReport {
-    pub fn is_clean(&self) -> bool {
-        self.missing.is_empty() && self.modified.is_empty() && self.extra.is_empty()
-    }
-}
-
 pub fn compare_to_manifest(
     target_root: &Path,
     manifest: &manifest::Manifest,

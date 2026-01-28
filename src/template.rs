@@ -15,12 +15,10 @@ pub struct Profile {
 pub struct OverlayFile {
     pub relative_path: PathBuf,
     pub source_path: PathBuf,
-    pub profile: String,
 }
 
 #[derive(Debug)]
 pub struct TemplateLayout {
-    pub root: PathBuf,
     pub profiles: Vec<Profile>,
     pub files: Vec<OverlayFile>,
 }
@@ -40,7 +38,6 @@ impl TemplateLayout {
         let files = overlay_files(&resolved_profiles)?;
 
         Ok(Self {
-            root,
             profiles: resolved_profiles,
             files,
         })
@@ -75,24 +72,6 @@ pub fn overlay_files(profiles: &[Profile]) -> Result<Vec<OverlayFile>> {
     }
 
     Ok(overlay_map.into_values().collect())
-}
-
-pub fn gitignore_by_profile(profiles: &[Profile]) -> Result<BTreeMap<String, Vec<String>>> {
-    let mut result = BTreeMap::new();
-
-    for profile in profiles {
-        let path = profile.path.join(".gitignore");
-        if path.exists() {
-            let content = fs::read_to_string(&path)
-                .with_context(|| format!("failed to read gitignore {}", path.display()))?;
-            let lines = content.lines().map(|line| line.to_string()).collect();
-            result.insert(profile.name.clone(), lines);
-        } else {
-            result.insert(profile.name.clone(), Vec::new());
-        }
-    }
-
-    Ok(result)
 }
 
 pub fn merge_config_by_profile(profiles: &[Profile]) -> Result<BTreeMap<String, MergeConfig>> {
@@ -184,7 +163,6 @@ fn collect_profile_files(profile: &Profile) -> Result<Vec<OverlayFile>> {
         entries.push(OverlayFile {
             relative_path,
             source_path,
-            profile: profile.name.clone(),
         });
     }
 

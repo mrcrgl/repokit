@@ -45,9 +45,7 @@ pub enum MergeStrategy {
 
 #[derive(Debug, Clone)]
 pub struct CompiledMergeRule {
-    pub name: Option<String>,
     pub strategy: MergeStrategy,
-    pub patterns: Vec<String>,
     matcher: GlobSet,
 }
 
@@ -55,9 +53,7 @@ impl CompiledMergeRule {
     pub fn from_rule(rule: &MergeRule) -> Result<Self> {
         let matcher = build_globset(&rule.patterns)?;
         Ok(Self {
-            name: rule.name.clone(),
             strategy: rule.strategy.clone(),
-            patterns: rule.patterns.clone(),
             matcher,
         })
     }

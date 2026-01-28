@@ -8,14 +8,6 @@ use std::path::{Path, PathBuf};
 pub struct AppliedFile {
     pub relative_path: PathBuf,
     pub source_hash: String,
-    pub outcome: ApplyOutcome,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ApplyOutcome {
-    Written,
-    SkippedSame,
-    ConflictNew,
 }
 
 #[derive(Debug, Default)]
@@ -28,11 +20,6 @@ impl ApplyReport {
     pub fn has_conflicts(&self) -> bool {
         !self.conflicts.is_empty()
     }
-}
-
-pub fn apply_init(layout: &TemplateLayout, target_root: &Path) -> Result<ApplyReport> {
-    let skip_paths = [PathBuf::from(".gitignore")];
-    apply_init_with_skip(layout, target_root, &skip_paths)
 }
 
 pub fn apply_init_with_skip(
@@ -61,7 +48,6 @@ pub fn apply_init_with_skip(
                 report.entries.push(AppliedFile {
                     relative_path,
                     source_hash,
-                    outcome: ApplyOutcome::SkippedSame,
                 });
                 continue;
             }
@@ -72,7 +58,6 @@ pub fn apply_init_with_skip(
             report.entries.push(AppliedFile {
                 relative_path,
                 source_hash,
-                outcome: ApplyOutcome::ConflictNew,
             });
             continue;
         }
@@ -81,20 +66,10 @@ pub fn apply_init_with_skip(
         report.entries.push(AppliedFile {
             relative_path,
             source_hash,
-            outcome: ApplyOutcome::Written,
         });
     }
 
     Ok(report)
-}
-
-pub fn apply_update(
-    layout: &TemplateLayout,
-    target_root: &Path,
-    manifest: &manifest::Manifest,
-) -> Result<ApplyReport> {
-    let skip_paths = [PathBuf::from(".gitignore")];
-    apply_update_with_skip(layout, target_root, manifest, &skip_paths)
 }
 
 pub fn apply_update_with_skip(
@@ -127,7 +102,6 @@ pub fn apply_update_with_skip(
             report.entries.push(AppliedFile {
                 relative_path,
                 source_hash,
-                outcome: ApplyOutcome::Written,
             });
             continue;
         }
@@ -142,14 +116,12 @@ pub fn apply_update_with_skip(
                     report.entries.push(AppliedFile {
                         relative_path,
                         source_hash,
-                        outcome: ApplyOutcome::SkippedSame,
                     });
                 } else {
                     write_bytes(&target_path, &source_bytes)?;
                     report.entries.push(AppliedFile {
                         relative_path,
                         source_hash,
-                        outcome: ApplyOutcome::Written,
                     });
                 }
             }
@@ -158,7 +130,6 @@ pub fn apply_update_with_skip(
                     report.entries.push(AppliedFile {
                         relative_path,
                         source_hash,
-                        outcome: ApplyOutcome::SkippedSame,
                     });
                 } else {
                     let new_path = conflict_path(&target_path)?;
@@ -167,7 +138,6 @@ pub fn apply_update_with_skip(
                     report.entries.push(AppliedFile {
                         relative_path,
                         source_hash,
-                        outcome: ApplyOutcome::ConflictNew,
                     });
                 }
             }

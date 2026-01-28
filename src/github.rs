@@ -2,7 +2,6 @@ use crate::template::Profile;
 use anyhow::{Context, Result, anyhow, bail};
 use serde::Deserialize;
 use std::collections::{BTreeMap, BTreeSet};
-use std::path::Path;
 use std::process::{Command, Stdio};
 
 #[derive(Debug, Clone, Deserialize, PartialEq, Eq)]
@@ -96,11 +95,11 @@ impl GitHubClient {
             format!("color={}", normalize_color(&label.color)?),
         ];
 
-        if let Some(description) = &label.description {
-            if !description.trim().is_empty() {
-                args.push("-f".to_string());
-                args.push(format!("description={}", description));
-            }
+        if let Some(description) = &label.description
+            && !description.trim().is_empty()
+        {
+            args.push("-f".to_string());
+            args.push(format!("description={}", description));
         }
 
         self.run_gh_api(&args, None)?;
@@ -174,10 +173,10 @@ impl GitHubClient {
 }
 
 pub fn detect_auth() -> Result<AuthState> {
-    if let Ok(token) = std::env::var("GITHUB_TOKEN") {
-        if !token.trim().is_empty() {
-            return Ok(AuthState::Available(Auth::Token(token)));
-        }
+    if let Ok(token) = std::env::var("GITHUB_TOKEN")
+        && !token.trim().is_empty()
+    {
+        return Ok(AuthState::Available(Auth::Token(token)));
     }
 
     if gh_auth_available()? {
@@ -303,12 +302,11 @@ pub fn color_mismatches(desired: &[Label], existing: &[Label]) -> Vec<(Label, La
 
     let mut mismatches = Vec::new();
     for desired_label in desired {
-        if let Some(existing_label) = existing_by_name.get(desired_label.name.as_str()) {
-            if normalize_color(&desired_label.color).ok()
+        if let Some(existing_label) = existing_by_name.get(desired_label.name.as_str())
+            && normalize_color(&desired_label.color).ok()
                 != normalize_color(&existing_label.color).ok()
-            {
-                mismatches.push((desired_label.clone(), (*existing_label).clone()));
-            }
+        {
+            mismatches.push((desired_label.clone(), (*existing_label).clone()));
         }
     }
 
@@ -324,8 +322,4 @@ fn normalize_color(color: &str) -> Result<String> {
         bail!("label color must be hex, got {}", color);
     }
     Ok(color.to_ascii_uppercase())
-}
-
-pub fn labels_toml_path(profile: &Profile) -> impl AsRef<Path> {
-    profile.path.join("github").join("labels.toml")
 }
