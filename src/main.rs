@@ -82,6 +82,21 @@ fn run(cli: Cli) -> Result<()> {
                 "template={:?} ref={:?} profiles={:?}",
                 cli.template, cli.ref_, cli.profiles
             );
+            let template_url = cli
+                .template
+                .as_deref()
+                .ok_or_else(|| anyhow!("--template is required for this command"))?;
+            let manifest_path = target_root.join(".kit.toml");
+            if manifest_path.exists() {
+                let existing = manifest::Manifest::load_from_path(&manifest_path)?;
+                if existing.matches_metadata(template_url, cli.ref_.as_deref(), &profiles) {
+                    let report = status::compare_to_manifest(&target_root, &existing)?;
+                    if report.is_clean() {
+                        println!("already up to date");
+                        return Ok(());
+                    }
+                }
+            }
             let repo = fetch_template_required(&cli)?;
             println!("template repo cloned to {:?}", repo.path());
             let layout = template::TemplateLayout::load(repo.path(), &profiles)?;

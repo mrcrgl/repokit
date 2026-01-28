@@ -28,6 +28,17 @@ impl Manifest {
         }
     }
 
+    pub fn matches_metadata(
+        &self,
+        template_url: &str,
+        reference: Option<&str>,
+        profiles: &[String],
+    ) -> bool {
+        self.template_url == template_url
+            && self.reference.as_deref() == reference
+            && self.profiles == profiles
+    }
+
     pub fn insert_file_hash(&mut self, relative_path: PathBuf, sha256: String) {
         self.files.insert(relative_path, FileEntry { sha256 });
     }
