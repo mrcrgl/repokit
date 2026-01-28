@@ -39,9 +39,17 @@ enum Commands {
         /// Profiles to apply (comma-separated), in order
         #[arg(long)]
         profiles: Option<String>,
+
+        /// Overwrite conflicting files instead of writing .new
+        #[arg(long)]
+        force: bool,
     },
     /// Update managed files to a new template ref
-    Update,
+    Update {
+        /// Overwrite conflicting files instead of writing .new
+        #[arg(long)]
+        force: bool,
+    },
     /// Show drift status vs manifest
     Status,
     /// Manage repokit configuration
@@ -113,6 +121,7 @@ fn run(cli: Cli) -> Result<()> {
             template,
             ref_,
             profiles,
+            force,
         } => {
             println!("repokit init (scaffold)");
             println!(
@@ -145,7 +154,7 @@ fn run(cli: Cli) -> Result<()> {
                 }
             }
             let skip_paths: Vec<PathBuf> = merged_paths.iter().cloned().collect();
-            let report = apply::apply_init_with_skip(&layout, &target_root, &skip_paths)?;
+            let report = apply::apply_init_with_skip(&layout, &target_root, &skip_paths, force)?;
             let mut manifest = manifest::Manifest::new(
                 template.clone().unwrap_or_default(),
                 ref_.clone(),
@@ -202,7 +211,7 @@ fn run(cli: Cli) -> Result<()> {
                 std::process::exit(2);
             }
         }
-        Commands::Update => {
+        Commands::Update { force } => {
             println!("repokit update (scaffold)");
             let manifest_path = target_root.join(".kit.toml");
             let existing = manifest::Manifest::load_from_path(&manifest_path)?;
@@ -231,8 +240,13 @@ fn run(cli: Cli) -> Result<()> {
                 }
             }
             let skip_paths: Vec<PathBuf> = merged_paths.iter().cloned().collect();
-            let report =
-                apply::apply_update_with_skip(&layout, &target_root, &existing, &skip_paths)?;
+            let report = apply::apply_update_with_skip(
+                &layout,
+                &target_root,
+                &existing,
+                &skip_paths,
+                force,
+            )?;
             let mut manifest = manifest::Manifest::new(
                 existing.template_url.clone(),
                 existing.reference.clone(),

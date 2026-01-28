@@ -15,6 +15,7 @@ Use a Git URL or a local filesystem path:
 Notes:
 - `init` is the only command that accepts `--template`, `--ref`, and `--profiles`.
 - If `.kit.toml` already exists, `init` fails; use `repokit config set` instead.
+- Use `--force` to overwrite conflicting files instead of writing `.new`.
 - Local templates do **not** support `--ref`.
 - `base` is always included first; duplicate profiles are ignored.
 
@@ -22,6 +23,7 @@ Notes:
 After init, `update` always uses `.kit.toml` (no CLI overrides):
 
 - `repokit update`
+- `repokit update --force` (overwrite conflicts instead of writing `.new`)
 
 ### Status
 After init, `status` always uses `.kit.toml` (no CLI overrides):

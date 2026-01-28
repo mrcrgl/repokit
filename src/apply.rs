@@ -7,7 +7,6 @@ use std::path::{Path, PathBuf};
 #[derive(Debug, Clone)]
 pub struct AppliedFile {
     pub relative_path: PathBuf,
-    pub source_hash: String,
 }
 
 #[derive(Debug, Default)]
@@ -26,6 +25,7 @@ pub fn apply_init_with_skip(
     layout: &TemplateLayout,
     target_root: &Path,
     skip_paths: &[PathBuf],
+    force_overwrite: bool,
 ) -> Result<ApplyReport> {
     let mut report = ApplyReport::default();
 
@@ -39,34 +39,30 @@ pub fn apply_init_with_skip(
 
         let source_bytes = fs::read(source_path)
             .with_context(|| format!("failed to read template file {}", source_path.display()))?;
-        let source_hash = manifest::hash_bytes(&source_bytes);
 
         if target_path.exists() {
             let target_bytes = fs::read(&target_path)
                 .with_context(|| format!("failed to read target file {}", target_path.display()))?;
             if target_bytes == source_bytes {
-                report.entries.push(AppliedFile {
-                    relative_path,
-                    source_hash,
-                });
+                report.entries.push(AppliedFile { relative_path });
+                continue;
+            }
+
+            if force_overwrite {
+                write_bytes(&target_path, &source_bytes)?;
+                report.entries.push(AppliedFile { relative_path });
                 continue;
             }
 
             let new_path = conflict_path(&target_path)?;
             write_bytes(&new_path, &source_bytes)?;
             report.conflicts.push(relative_path.clone());
-            report.entries.push(AppliedFile {
-                relative_path,
-                source_hash,
-            });
+            report.entries.push(AppliedFile { relative_path });
             continue;
         }
 
         write_bytes(&target_path, &source_bytes)?;
-        report.entries.push(AppliedFile {
-            relative_path,
-            source_hash,
-        });
+        report.entries.push(AppliedFile { relative_path });
     }
 
     Ok(report)
@@ -77,6 +73,7 @@ pub fn apply_update_with_skip(
     target_root: &Path,
     manifest: &manifest::Manifest,
     skip_paths: &[PathBuf],
+    force_overwrite: bool,
 ) -> Result<ApplyReport> {
     let mut report = ApplyReport::default();
 
@@ -90,7 +87,6 @@ pub fn apply_update_with_skip(
 
         let source_bytes = fs::read(source_path)
             .with_context(|| format!("failed to read template file {}", source_path.display()))?;
-        let source_hash = manifest::hash_bytes(&source_bytes);
 
         let manifest_entry = manifest
             .files
@@ -99,10 +95,7 @@ pub fn apply_update_with_skip(
 
         if !target_path.exists() {
             write_bytes(&target_path, &source_bytes)?;
-            report.entries.push(AppliedFile {
-                relative_path,
-                source_hash,
-            });
+            report.entries.push(AppliedFile { relative_path });
             continue;
         }
 
@@ -113,32 +106,23 @@ pub fn apply_update_with_skip(
         match manifest_entry {
             Some(expected_hash) if expected_hash == target_hash => {
                 if target_bytes == source_bytes {
-                    report.entries.push(AppliedFile {
-                        relative_path,
-                        source_hash,
-                    });
+                    report.entries.push(AppliedFile { relative_path });
                 } else {
                     write_bytes(&target_path, &source_bytes)?;
-                    report.entries.push(AppliedFile {
-                        relative_path,
-                        source_hash,
-                    });
+                    report.entries.push(AppliedFile { relative_path });
                 }
             }
             Some(_) | None => {
                 if target_bytes == source_bytes {
-                    report.entries.push(AppliedFile {
-                        relative_path,
-                        source_hash,
-                    });
+                    report.entries.push(AppliedFile { relative_path });
+                } else if force_overwrite {
+                    write_bytes(&target_path, &source_bytes)?;
+                    report.entries.push(AppliedFile { relative_path });
                 } else {
                     let new_path = conflict_path(&target_path)?;
                     write_bytes(&new_path, &source_bytes)?;
                     report.conflicts.push(relative_path.clone());
-                    report.entries.push(AppliedFile {
-                        relative_path,
-                        source_hash,
-                    });
+                    report.entries.push(AppliedFile { relative_path });
                 }
             }
         }
