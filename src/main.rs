@@ -1,4 +1,4 @@
-use anyhow::{Result, anyhow};
+use anyhow::{Context, Result, anyhow};
 use clap::{Parser, Subcommand};
 use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
@@ -14,6 +14,7 @@ mod markdown;
 mod merge;
 mod status;
 mod template;
+mod template_vars;
 
 #[derive(Parser, Debug)]
 #[command(name = "repokit")]
@@ -128,6 +129,7 @@ fn run(cli: Cli) -> Result<()> {
                 ));
             }
             let profiles = resolve_profile_order(profiles.as_deref());
+            let template_vars = resolve_template_vars(&target_root);
             let repo = fetch_template_required(template_url, ref_.as_deref())?;
             println!("template repo cloned to {:?}", repo.path());
             let layout = template::TemplateLayout::load(repo.path(), &profiles)?;
@@ -150,7 +152,21 @@ fn run(cli: Cli) -> Result<()> {
                 profiles.clone(),
             );
             for entry in &report.entries {
-                manifest.insert_file_hash(entry.relative_path.clone(), entry.source_hash.clone());
+                let target_path = target_root.join(&entry.relative_path);
+                let bytes = fs::read(&target_path).with_context(|| {
+                    format!("failed to read target file {}", target_path.display())
+                })?;
+                let final_bytes =
+                    if let Some(updated) = apply_template_vars_to_bytes(&bytes, &template_vars)? {
+                        fs::write(&target_path, &updated).with_context(|| {
+                            format!("failed to write target file {}", target_path.display())
+                        })?;
+                        updated
+                    } else {
+                        bytes
+                    };
+                let hash = manifest::hash_bytes(&final_bytes);
+                manifest.insert_file_hash(entry.relative_path.clone(), hash);
             }
             for relative_path in &merged_paths {
                 let strategy = match merge::match_strategy(&compiled_rules, relative_path) {
@@ -171,6 +187,7 @@ fn run(cli: Cli) -> Result<()> {
                         &profiles,
                     ),
                 };
+                let merged = template_vars::apply_template_vars(&merged, &template_vars);
                 fs::write(&target_path, merged.as_bytes())?;
                 let hash = manifest::hash_bytes(merged.as_bytes());
                 manifest.insert_file_hash(relative_path.clone(), hash);
@@ -195,6 +212,7 @@ fn run(cli: Cli) -> Result<()> {
                 ));
             }
             let profiles = existing.profiles.clone();
+            let template_vars = resolve_template_vars(&target_root);
             let repo = git::clone_template_to_temp(git::GitCloneOptions {
                 template_url: existing.template_url.as_str(),
                 reference: existing.reference.as_deref(),
@@ -221,7 +239,21 @@ fn run(cli: Cli) -> Result<()> {
                 profiles.clone(),
             );
             for entry in &report.entries {
-                manifest.insert_file_hash(entry.relative_path.clone(), entry.source_hash.clone());
+                let target_path = target_root.join(&entry.relative_path);
+                let bytes = fs::read(&target_path).with_context(|| {
+                    format!("failed to read target file {}", target_path.display())
+                })?;
+                let final_bytes =
+                    if let Some(updated) = apply_template_vars_to_bytes(&bytes, &template_vars)? {
+                        fs::write(&target_path, &updated).with_context(|| {
+                            format!("failed to write target file {}", target_path.display())
+                        })?;
+                        updated
+                    } else {
+                        bytes
+                    };
+                let hash = manifest::hash_bytes(&final_bytes);
+                manifest.insert_file_hash(entry.relative_path.clone(), hash);
             }
             for relative_path in &merged_paths {
                 let strategy = match merge::match_strategy(&compiled_rules, relative_path) {
@@ -242,6 +274,7 @@ fn run(cli: Cli) -> Result<()> {
                         &profiles,
                     ),
                 };
+                let merged = template_vars::apply_template_vars(&merged, &template_vars);
                 fs::write(&target_path, merged.as_bytes())?;
                 let hash = manifest::hash_bytes(merged.as_bytes());
                 manifest.insert_file_hash(relative_path.clone(), hash);
@@ -470,6 +503,31 @@ fn warn_duplicate_labels(duplicates: &[String]) {
     }
 }
 
+fn resolve_template_vars(target_root: &Path) -> BTreeMap<String, String> {
+    match git::origin_url(target_root).and_then(|origin| template_vars::vars_from_origin(&origin)) {
+        Ok(vars) => vars,
+        Err(err) => {
+            eprintln!("warning: template vars disabled: {:#}", err);
+            BTreeMap::new()
+        }
+    }
+}
+
+fn apply_template_vars_to_bytes(
+    bytes: &[u8],
+    vars: &BTreeMap<String, String>,
+) -> Result<Option<Vec<u8>>> {
+    let text = match std::str::from_utf8(bytes) {
+        Ok(text) => text,
+        Err(_) => return Ok(None),
+    };
+    let rendered = template_vars::apply_template_vars(text, vars);
+    if rendered == text {
+        return Ok(None);
+    }
+    Ok(Some(rendered.into_bytes()))
+}
+
 fn report_template_status(target_root: &Path, manifest: &manifest::Manifest) -> Result<()> {
     if manifest.template_url.trim().is_empty() {
         return Ok(());
@@ -513,7 +571,13 @@ fn build_desired_template_bytes(
     compiled_rules: &[merge::CompiledMergeRule],
     profiles: &[String],
 ) -> Result<BTreeMap<PathBuf, Vec<u8>>> {
+    let template_vars = resolve_template_vars(target_root);
     let mut desired = template::template_file_bytes(layout, compiled_rules)?;
+    for bytes in desired.values_mut() {
+        if let Some(updated) = apply_template_vars_to_bytes(bytes, &template_vars)? {
+            *bytes = updated;
+        }
+    }
 
     for overlay in &layout.files {
         let Some(strategy) = merge::match_strategy(compiled_rules, &overlay.relative_path) else {
@@ -532,6 +596,7 @@ fn build_desired_template_bytes(
                 markdown::merge_markdown_blocks(existing.as_deref(), &managed_lines, profiles)
             }
         };
+        let merged = template_vars::apply_template_vars(&merged, &template_vars);
 
         desired.insert(overlay.relative_path.clone(), merged.into_bytes());
     }

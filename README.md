@@ -51,6 +51,15 @@ Templates are expected to follow this structure:
 
 The `.repokit/` directory configures `repokit` behavior only and is not copied into the target repo.
 
+## Template variables
+
+`repokit` replaces template variables in **file contents only** (not filenames or paths). Values are derived from `git remote origin`. If the origin is missing or unsupported, variables are left unchanged and a warning is emitted.
+
+Supported variables:
+
+- `{{REPOSITORY_NAME}}` — `owner/repo` (e.g. `acme/widgets`)
+- `{{REPOSITORY_URL}}` — full origin URL (e.g. `git@github.com:acme/widgets.git`)
+
 ### Example merge rules (`merge.toml`)
 
 ```toml

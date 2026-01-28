@@ -7,3 +7,4 @@ pub mod markdown;
 pub mod merge;
 pub mod status;
 pub mod template;
+pub mod template_vars;
