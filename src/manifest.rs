@@ -53,7 +53,14 @@ impl Manifest {
 pub fn hash_bytes(bytes: &[u8]) -> String {
     let mut hasher = Sha256::new();
     hasher.update(bytes);
-    format!("{:x}", hasher.finalize())
+    hasher
+        .finalize()
+        .iter()
+        .fold(String::with_capacity(64), |mut hex, byte| {
+            use std::fmt::Write;
+            let _ = write!(hex, "{byte:02x}");
+            hex
+        })
 }
 
 pub fn hash_file(path: impl AsRef<Path>) -> Result<String> {
